@@ -47,9 +47,9 @@ class TwoLayerNet(object):
         # weights and biases using the keys 'W1' and 'b1' and second layer weights #
         # and biases using the keys 'W2' and 'b2'.                                 #
         ############################################################################
-        self.params['W1'] = weight_scale * np.random.normal(size=(input_dim, hidden_dim))
+        self.params['W1'] = np.random.normal(scale=weight_scale, size=(input_dim, hidden_dim))
         self.params['b1'] = np.zeros(hidden_dim)
-        self.params['W2'] = weight_scale * np.random.normal(size=(hidden_dim, num_classes))
+        self.params['W2'] = np.random.normal(scale=weight_scale, size=(hidden_dim, num_classes))
         self.params['b2'] = np.zeros(num_classes)
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -77,6 +77,7 @@ class TwoLayerNet(object):
         """
         scores = None
         cache = {}
+        X = X.reshape([X.shape[0], -1])
         ############################################################################
         # TODO: Implement the forward pass for the two-layer net, computing the    #
         # class scores for X and storing them in the scores variable.              #
@@ -112,10 +113,10 @@ class TwoLayerNet(object):
         #                             END OF YOUR CODE                             #
         ############################################################################
         
-        loss = loss + 0.5 * self.reg * (np.sum(self.params['W1'] ** 2) + np.sum(self.params['W2'] ** 2))
+        loss += 0.5 * self.reg * (np.sum(self.params['W1'] ** 2) + np.sum(self.params['W2'] ** 2))
         grads['W2'] += self.reg * self.params['W2']
         grads['W1'] += self.reg * self.params['W1']
-        print(loss)
+        
         return loss, grads
 
 
@@ -183,9 +184,9 @@ class FullyConnectedNet(object):
             self.params['W' + str(i+1)] = np.random.normal(scale=weight_scale, size=(layers[i], layers[i+1]))
             self.params['b' + str(i+1)] = np.zeros(layers[i+1])
             
-            if use_batchnorm:
-                self.params['gamma' + str(i+1)] = np.ones(layers[i])
-                self.params['beta' + str(i+1)] = np.zeros(layers[i]) 
+            if use_batchnorm and i != self.num_layers - 1:
+                self.params['gamma' + str(i+1)] = np.ones(layers[i+1])
+                self.params['beta' + str(i+1)] = np.zeros(layers[i+1]) 
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -253,13 +254,13 @@ class FullyConnectedNet(object):
             layer_num = str(i + 1)
             out, af_caches[i] = affine_forward(x_input, self.params['W'+layer_num], self.params['b'+layer_num])
             if self.use_batchnorm:
-                out, bn_caches[i] = batchnorm_forward(x_input, self.params['gamma'+layer_num], self.params['beta'+layer_num], self.bn_params[i])
+                out, bn_caches[i] = batchnorm_forward(out, self.params['gamma'+layer_num], self.params['beta'+layer_num], self.bn_params[i])
             out, rl_caches[i] = relu_forward(out)
             
             if self.use_dropout:
-                out, do_caches[i] = dropout_forward(out)
+                out, do_caches[i] = dropout_forward(out, self.dropout_param)
                 
-            x_input = out
+            x_input = out.copy()
         
         scores, af_caches[self.num_layers-1] = affine_forward(x_input, self.params['W'+str(self.num_layers)], self.params['b'+str(self.num_layers)])
         
